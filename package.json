@@ -2,7 +2,8 @@
   "name": "js-sort-export-functions",
   "displayName": "js-sort-export-functions",
   "description": "js-sort-export-functions",
-  "version": "0.0.1",
+  "license": "MIT",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.87.0"
   },
@@ -12,6 +13,7 @@
   "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
+  "licence": "MIT",
     "commands": [
       {
         "command": "js-sort-export-functions.sortExportSymbols",
