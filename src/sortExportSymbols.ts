@@ -8,6 +8,7 @@ export function sortExportSymbols(inputCode: string): string {
 
 function getExportBlocks(inputCode: string): string {
     const exportDeclarations: string[] = [];
+    const blockDeclarations: string[] = [];
     let nonExportCode = inputCode; // Start with the full input code
 
     // Parse the input code
@@ -19,55 +20,58 @@ function getExportBlocks(inputCode: string): string {
     babelTraverse.default(ast, {
         ExportNamedDeclaration(path) {
             // If it's an export declaration, add it to the exportDeclarations array
-            let start = path.node.start ?? 0;
+            let exportStart = path.node.start ?? 0;
+            let blockStart = exportStart;
             const end = path.node.end ?? 0;
             const comments = path.node.leadingComments;
-            if(comments) {
+            if (comments) {
                 for (const comment of comments) {
-                    if (comment.end != null && comment.end <= start) {
+                    if (comment.end != null && comment.end <= blockStart) {
                         // Check if comment.start is defined before accessing it
                         const commentStart = comment.start ?? 0;
-                        if(comment.start) {
-                            start = comment.start;
+                        if (comment.start) {
+                            blockStart = comment.start;
                         }
                     }
                 }
             }
-            let exportBlock = inputCode.substring(start, end);
+            let block = inputCode.substring(blockStart, end);
+            let exportBlock = inputCode.substring(exportStart, end);
             exportDeclarations.push(exportBlock);
+            blockDeclarations.push(block);
 
             // Remove the export block from non-export code
-            nonExportCode = nonExportCode.replace(exportBlock, '');
+            nonExportCode = nonExportCode.replace(block, '');
+
         },
         ExportDefaultDeclaration(path) {
-            // If it's an export declaration, add it to the exportDeclarations array
-            let start = path.node.start ?? 0;
-            const end = path.node.end ?? 0;
-            const comments = path.node.leadingComments;
-            if(comments) {
-                for (const comment of comments) {
-                    if (comment.end != null && comment.end <= start) {
-                        // Check if comment.start is defined before accessing it
-                        const commentStart = comment.start ?? 0;
-                        if(comment.start) {
-                            start = comment.start;
-                        }
-                    }
-                }
-            }
-            let exportBlock = inputCode.substring(start, end);
-            exportDeclarations.push(exportBlock);
-
-            // Remove the export block from non-export code
-            nonExportCode = nonExportCode.replace(exportBlock, '');
+           
         },
     });
 
+    // Object to store original indexes
+    const originalIndexes: Record<number, number> = {};
+
+
     // Sort the export declarations alphabetically
-    const sortedExports = exportDeclarations.sort();
+    const sortedExports = exportDeclarations.slice().sort((a, b) => {
+        // Use localeCompare to ensure correct alphabetical sorting
+        return a.localeCompare(b);
+    });
+
+    // Populate originalIndexes object
+    exportDeclarations.forEach((exportDeclaration, index) => {
+        // Find index of exportDeclaration in sorted array
+        const sortedIndex = sortedExports.indexOf(exportDeclaration);
+        // Store original index and sorted index
+        originalIndexes[sortedIndex] =  index;
+    });
+
+    // return JSON.stringify({sortedExports, exportDeclarations, blockDeclarations, originalIndexes});
+
 
     // Join the sorted export declarations with the non-export code
-    const sortedCode = [nonExportCode.trim(), ...sortedExports].join('\n\n').trim();
+    const sortedCode = [nonExportCode.trim(), ...sortedExports.map((_,index) => {return blockDeclarations[originalIndexes[index]]})].join('\n\n').trim();
 
     return sortedCode;
 }
